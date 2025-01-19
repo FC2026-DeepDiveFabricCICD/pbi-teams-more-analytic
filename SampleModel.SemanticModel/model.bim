@@ -259,7 +259,7 @@
         "measures": [
           {
             "name": "Number of Characters",
-            "expression": "COUNTROWS('MarvelFact') + 0",
+            "expression": "COUNTROWS('MarvelFact')",
             "formatString": "0",
             "lineageTag": "df54ac01-57f7-4a28-a338-2609c59c6503"
           },
