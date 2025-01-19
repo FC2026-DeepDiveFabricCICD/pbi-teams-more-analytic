@@ -19,6 +19,27 @@
   ],
   "sections": [
     {
+      "config": "{}",
+      "displayName": "Page 3",
+      "displayOption": 1,
+      "filters": "[]",
+      "height": 720.00,
+      "name": "5172869b6d496a14a64d",
+      "ordinal": 2,
+      "visualContainers": [
+        {
+          "config": "{\"name\":\"26d7ffb33c4e4b44d506\",\"layouts\":[{\"id\":0,\"position\":{\"x\":10,\"y\":0,\"width\":280,\"height\":280,\"z\":0,\"tabOrder\":0}}],\"singleVisual\":{\"visualType\":\"slicer\",\"projections\":{\"Values\":[{\"queryRef\":\"MarvelFact.DateID\",\"active\":true}]},\"prototypeQuery\":{\"Version\":2,\"From\":[{\"Name\":\"m\",\"Entity\":\"MarvelFact\",\"Type\":0}],\"Select\":[{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"m\"}},\"Property\":\"DateID\"},\"Name\":\"MarvelFact.DateID\",\"NativeReferenceName\":\"DateID\"}]},\"drillFilterOtherVisuals\":true,\"objects\":{\"data\":[{\"properties\":{\"mode\":{\"expr\":{\"Literal\":{\"Value\":\"'Between'\"}}}}}]}}}",
+          "filters": "[]",
+          "height": 280.00,
+          "width": 280.00,
+          "x": 10.00,
+          "y": 0.00,
+          "z": 0.00
+        }
+      ],
+      "width": 1280.00
+    },
+    {
       "config": "{\"relationships\":[{\"source\":\"8823c9fce3db19aec38e\",\"target\":\"cb9b48525e8e70780eb8\",\"type\":3}]}",
       "displayName": "Page 1",
       "displayOption": 1,
@@ -63,7 +84,7 @@
           "z": 2000.00
         },
         {
-          "config": "{\"name\":\"c3c147760d0d3ad62a09\",\"layouts\":[{\"id\":0,\"position\":{\"x\":10.14977973568282,\"y\":173.6740088105727,\"z\":4000,\"width\":219.91189427312776,\"height\":186.07929515418502,\"tabOrder\":4000}}],\"singleVisual\":{\"visualType\":\"slicer\",\"projections\":{\"Values\":[{\"queryRef\":\"AlignmentDim.Alignment\",\"active\":true}]},\"prototypeQuery\":{\"Version\":2,\"From\":[{\"Name\":\"a\",\"Entity\":\"AlignmentDim\",\"Type\":0}],\"Select\":[{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"a\"}},\"Property\":\"Alignment\"},\"Name\":\"AlignmentDim.Alignment\"}]},\"drillFilterOtherVisuals\":true,\"objects\":{\"data\":[{\"properties\":{\"mode\":{\"expr\":{\"Literal\":{\"Value\":\"'Basic'\"}}}}}],\"general\":[{\"properties\":{\"filter\":{\"filter\":{\"Version\":2,\"From\":[{\"Name\":\"a\",\"Entity\":\"AlignmentDim\",\"Type\":0}],\"Where\":[{\"Condition\":{\"In\":{\"Expressions\":[{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"a\"}},\"Property\":\"Alignment\"}}],\"Values\":[[{\"Literal\":{\"Value\":\"'Bad'\"}}]]}}}]}}}}]},\"vcObjects\":{\"title\":[{\"properties\":{\"text\":{\"expr\":{\"Literal\":{\"Value\":\"'Alignment Slicer'\"}}}}}],\"general\":[{\"properties\":{\"altText\":{\"expr\":{\"Literal\":{\"Value\":\"'Alignment Slicer'\"}}}}}]}}}",
+          "config": "{\"name\":\"c3c147760d0d3ad62a09\",\"layouts\":[{\"id\":0,\"position\":{\"x\":10.14977973568282,\"y\":173.6740088105727,\"z\":4000,\"width\":219.91189427312776,\"height\":186.07929515418502,\"tabOrder\":4000}}],\"singleVisual\":{\"visualType\":\"slicer\",\"projections\":{\"Values\":[{\"queryRef\":\"AlignmentDim.Alignment\",\"active\":true}]},\"prototypeQuery\":{\"Version\":2,\"From\":[{\"Name\":\"a\",\"Entity\":\"AlignmentDim\",\"Type\":0}],\"Select\":[{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"a\"}},\"Property\":\"Alignment\"},\"Name\":\"AlignmentDim.Alignment\"}]},\"drillFilterOtherVisuals\":true,\"objects\":{\"data\":[{\"properties\":{\"mode\":{\"expr\":{\"Literal\":{\"Value\":\"'Basic'\"}}}}}],\"general\":[{\"properties\":{\"filter\":{\"filter\":{\"Version\":2,\"From\":[{\"Name\":\"a\",\"Entity\":\"AlignmentDim\",\"Type\":0}],\"Where\":[{\"Condition\":{\"In\":{\"Expressions\":[{\"Column\":{\"Expression\":{\"SourceRef\":{\"Source\":\"a\"}},\"Property\":\"Alignment\"}}],\"Values\":[[{\"Literal\":{\"Value\":\"'Good'\"}}]]}}}]}}}}]},\"vcObjects\":{\"title\":[{\"properties\":{\"text\":{\"expr\":{\"Literal\":{\"Value\":\"'Alignment Slicer'\"}}}}}],\"general\":[{\"properties\":{\"altText\":{\"expr\":{\"Literal\":{\"Value\":\"'Alignment Slicer'\"}}}}}]}}}",
           "filters": "[]",
           "height": 186.08,
           "width": 219.91,
