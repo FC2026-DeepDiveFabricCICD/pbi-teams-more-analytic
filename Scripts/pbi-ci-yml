@@ -1,0 +1,232 @@
+parameters:
+  # Define a parameter for whether to run tests on all files
+  - name: RUN_ALL
+    displayName: Generate tests for all files?
+    type: boolean
+    default: false
+
+# Trigger this pipeline on changes to the development branch
+trigger:
+  - development
+
+# Define the build agent's operating system
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  # Set variables for RUN_ALL and other important paths/settings
+  - name: 'RUN_ALL'
+    value: '${{ parameters.RUN_ALL }}'
+  - name: 'PBI_PREFIX'
+    value: ''
+  - name: 'WORKSPACE_NAME'
+    value: 'No_Name'
+
+steps:
+  # Checkout the repository to the pipeline environment
+  - checkout: self
+    persistCredentials: true
+    fetchDepth: 0
+
+  # Task to find changed files in specific folders (e.g., Dataset, SemanticModel, Report)
+  - task: PowerShell@2
+    displayName: 'Find changed files in specific folders'
+    inputs:
+      targetType: 'inline'
+      script: |
+        # Set prefix if you store your Power BI files in a subfolder
+        $prefix = ${env:PBI_PREFIX} 
+        # Set RUN_ALL based on the passed parameter
+        $runAll = ${env:RUN_ALL}   
+        
+        # Get changed files in the Semantic Model and Dataset folders
+        $pbipSMChanges = @(git diff --name-only --relative --diff-filter=d HEAD~1..HEAD -- '*.Dataset/**' '*.SemanticModel/**')
+        $pbipSMChanges += @(git diff --name-only --relative --diff-filter=d HEAD~2..HEAD -- '*.Dataset/**' '*.SemanticModel/**')
+        $pbipSMChanges = $pbipSMChanges | Sort-Object -Unique
+        
+        # Get changed files in the Report folder
+        $pbipRptChanges = @(git diff --name-only --relative --diff-filter=d HEAD~1..HEAD -- '*.Report/**')
+        $pbipRptChanges += @(git diff --name-only --relative --diff-filter=d HEAD~2..HEAD -- '*.Report/**')
+        $pbipRptChanges = $pbipRptChanges | Sort-Object -Unique         
+        
+        # If RUN_ALL is true, publish for all folders, not just the changed ones
+        if($runAll -eq $true){
+          Write-Host "Running tests for all the Semantic Model or Report folders. Exiting..."
+          $pbipRptChanges = @(Get-ChildItem -Path "." -Recurse -Directory | Where-Object {$_.Name -like "*.Report"} | Select -ExpandProperty Name)
+          $pbipSMChanges = @(Get-ChildItem -Path "." -Recurse -Directory | Where-Object {$_.Name -like "*.SemanticModel"} | Select -ExpandProperty Name)
+        }
+
+        # If no changes detected, exit the pipeline
+        if($pbipSMChanges -eq $null -and $pbipRptChanges -eq $null){
+          Write-Host "No changes detected in the Semantic Model or Report folders. Exiting..."
+          exit 0
+        }
+
+        # Identify and collect paths for the changed Semantic Models
+        $sMPathsToPromote = @()
+        foreach($change in $pbipSMChanges){
+          # Replace sequences with an em dash for consistency
+          $change = $change -replace '\\342\\200\\223','–'
+          if ($runAll -and ($change -like '*.SemanticModel' -or $change -like '*.Dataset')){
+            $sMPathsToPromote += $change
+          } elseif ($change -like '*.SemanticModel/*' -or $change -like '*.Dataset/*') {
+            $parentFolder = Split-Path $change -Parent
+            $topFolder = ($parentFolder -split '\\') | Where-Object {$_ -like '*.SemanticModel' -or $_ -like '*.Dataset'} | Select-Object -First 1
+            Write-Host $topFolder
+            if(Test-Path -LiteralPath "$(Build.SourcesDirectory)/$($prefix)$($topFolder)"){
+              $sMPathsToPromote += $topFolder
+            }                
+          }
+        } # End foreach for Semantic Models
+        
+        # Remove duplicates and set the variable for Semantic Models
+        $sMPathsToPromote = $sMPathsToPromote | Sort-Object -Unique
+        $pbipSMChangesArray = @([System.Collections.Generic.HashSet[string]]$sMPathsToPromote)     
+        Write-Host "##vso[task.setvariable variable=pbipSMChangesArray]$($pbipSMChangesArray -join ',')"
+
+        # Identify and collect paths for the changed Reports
+        $rptPathsToPromote = @()
+        foreach($change in $pbipRptChanges){
+          # Replace sequences with an em dash for consistency
+          $change = $change -replace '\\342\\200\\223','–'
+          if ($runAll -and ($change -like '*.Report')){
+            $rptPathsToPromote += $change
+          } elseif ($change -like '*.Report/*') {
+            $parentFolder = Split-Path $change -Parent
+            $topFolder = ($parentFolder -split '\\') | Where-Object {$_ -like '*.Report'} | Select-Object -First 1
+            Write-Host $topFolder
+            if(Test-Path -LiteralPath "$(Build.SourcesDirectory)/$($prefix)$($topFolder)"){
+              $rptPathsToPromote += $topFolder
+            }                
+          }
+        } # End foreach for Reports
+
+        # Remove duplicates and set the variable for Reports
+        $rptPathsToPromote = $rptPathsToPromote | Sort-Object -Unique
+        Write-Host "-----"
+        Write-Host $rptPathsToPromote
+        $rptPathsToPromote = @([System.Collections.Generic.HashSet[string]]$rptPathsToPromote)     
+        Write-Host "##vso[task.setvariable variable=rptPathsToPromote]$($rptPathsToPromote -join ',')"
+
+  # Task to prepare Semantic Model artifacts for publishing
+  - task: PowerShell@2
+    displayName: 'Prepare Semantic Model Artifacts for Publishing'
+    inputs:
+      targetType: 'inline'
+      script: |
+        # Set Commit ID and other related variables
+        $commitId = $env:BUILD_SOURCEVERSION  
+        $prefix = ${env:PBI_PREFIX}
+        $branchName = "$(Build.SourceBranchName)"      
+        $workspaceName = ${env:WORKSPACE_NAME}
+
+        # Create a directory for storing combined models
+        $combinedArtifactPath = "$(Build.ArtifactStagingDirectory)/CombinedModels/$workspaceName/$commitId"
+        New-Item -ItemType Directory -Path $combinedArtifactPath -Force
+
+        # If no changes in the Semantic Model, write to a file and exit
+        try {
+          $noChangesFilePath = "NoChanges.txt"
+          if([string]::IsNullOrEmpty("$(pbipSMChangesArray)")){
+              Set-Content -Path $noChangesFilePath -Value "No Changes"
+              Copy-Item -Path "$($noChangesFilePath)" -Destination $combinedArtifactPath
+              Write-Host "No changes detected in the Semantic Model. Exiting..."
+              Write-Host "##vso[task.setvariable variable=ArtifactsExist]false"
+              exit 0
+          } 
+        }
+        catch {
+          Set-Content -Path $noChangesFilePath -Value "No Changes"      
+          Copy-Item -Path "$($noChangesFilePath)" -Destination $combinedArtifactPath
+          Write-Host "No changes detected in the Semantic Model. Exiting..."
+          Write-Host "##vso[task.setvariable variable=ArtifactsExist]false"          
+          exit 0
+        }
+
+        # Set variable indicating that artifacts exist
+        Write-Host "##vso[task.setvariable variable=ArtifactsExist]true"
+        $modelsPathsToPromote = "$(pbipSMChangesArray)" -split ','
+        
+        # Copy all changed Semantic Models to the combined artifact path
+        foreach ($path in $modelsPathsToPromote) {
+            Write-Host "Copying $path to $combinedArtifactPath"
+            Copy-Item -LiteralPath "$(Build.SourcesDirectory)/$($prefix)$($path)" -Destination $combinedArtifactPath -Recurse
+        }
+
+  # Publish the combined models as build artifacts
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Combined Models Artifacts'
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)/CombinedModels'
+      ArtifactName: CombinedModels
+      PublishLocation: Container  
+
+  # Task to prepare Report artifacts for publishing
+  - task: PowerShell@2
+    displayName: 'Publish Report Artifacts for Publishing'
+    inputs:
+      targetType: 'inline'
+      script: |
+        # Repeat the same steps for Report artifacts
+        $commitId = $env:BUILD_SOURCEVERSION  
+        $prefix = ${env:PBI_PREFIX}
+        $branchName = "$(Build.SourceBranchName)"      
+        $workspaceName = ${env:WORKSPACE_NAME}
+        
+        # Directory creation and change detection for Reports
+        $combinedArtifactPath = "$(Build.ArtifactStagingDirectory)/CombinedReports/$workspaceName/$commitId"
+        New-Item -ItemType Directory -Path $combinedArtifactPath -Force
+
+        try {
+          $noChangesFilePath = "NoChanges.txt"
+          if([string]::IsNullOrEmpty("$(rptPathsToPromote)")){
+              Set-Content -Path $noChangesFilePath -Value "No Changes"
+              Copy-Item -Path "$($noChangesFilePath)" -Destination $combinedArtifactPath
+              Write-Host "No changes detected in the Report. Exiting..."
+              Write-Host "##vso[task.setvariable variable=ArtifactsExist]false"
+              exit 0
+          } 
+        }
+        catch {
+          Set-Content -Path $noChangesFilePath -Value "No Changes"      
+          Copy-Item -Path "$($noChangesFilePath)" -Destination $combinedArtifactPath
+          Write-Host "No changes detected in the Report. Exiting..."
+          Write-Host "##vso[task.setvariable variable=ArtifactsExist]false"          
+          exit 0
+        }
+
+        Write-Host "##vso[task.setvariable variable=ArtifactsExist]true"
+        $rptPathsToPromote = "$(rptPathsToPromote)" -split ','
+        
+        # Copy all changed Reports to the combined artifact path
+        foreach ($path in $rptPathsToPromote) {
+            Write-Host "Copying $path to $combinedArtifactPath"
+            Copy-Item -LiteralPath "$(Build.SourcesDirectory)/$($prefix)/$($path)" -Destination $combinedArtifactPath -Recurse
+        }
+
+  # Publish the combined reports as build artifacts
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Combined Report Artifacts'
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)/CombinedReports'
+      ArtifactName: CombinedReports
+      PublishLocation: Container    
+
+  # Verify that no .abf files exist for security purposes
+  - task: PowerShell@2
+    displayName: 'Verify .abf files do not exist for security purposes'
+    inputs:
+      targetType: 'inline'
+      script: |
+        # Search for any .abf files in the repository
+        $abfFiles = Get-ChildItem -Path $(System.DefaultWorkingDirectory) -Recurse -Filter "*.abf"
+
+        if ($abfFiles.Count -gt 0){
+          Write-Host "##[error]Presence of .abf files indicates the .gitignore has been modified or .abf manually added. `
+          For security purposes .abf may contain sensitive data and should not be in the repository.  The following `
+          .abf files were found in the repository:"
+          $abfFiles | ForEach-Object { Write-Host "##[error]$($_.FullName)"}
+          exit 1
+        } else {
+          Write-Host "##[debug]No .abf files found in the repository." 
+        }
