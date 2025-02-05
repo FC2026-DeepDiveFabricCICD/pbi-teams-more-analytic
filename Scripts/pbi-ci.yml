@@ -115,13 +115,14 @@ steps:
       targetType: 'inline'
       script: |
         # Set Commit ID and other related variables
-        $commitId = $env:BUILD_SOURCEVERSION  
+        $commitId = $env:BUILD_SOURCEVERSION
+        $repositoryId = $env:BUILD_REPOSITORY_ID  
         $prefix = ${env:PBI_PREFIX}
         $branchName = "$(Build.SourceBranchName)"      
         $workspaceName = ${env:WORKSPACE_NAME}
 
         # Create a directory for storing combined models
-        $combinedArtifactPath = "$(Build.ArtifactStagingDirectory)/CombinedModels/$workspaceName/$commitId"
+        $combinedArtifactPath = "$(Build.ArtifactStagingDirectory)/CombinedModels/$workspaceName~$repositoryId~$branchName~$commitId"
         New-Item -ItemType Directory -Path $combinedArtifactPath -Force
 
         # If no changes in the Semantic Model, write to a file and exit
@@ -169,12 +170,13 @@ steps:
       script: |
         # Repeat the same steps for Report artifacts
         $commitId = $env:BUILD_SOURCEVERSION  
+        $repositoryId = $env:BUILD_REPOSITORY_ID
         $prefix = ${env:PBI_PREFIX}
         $branchName = "$(Build.SourceBranchName)"      
         $workspaceName = ${env:WORKSPACE_NAME}
         
         # Directory creation and change detection for Reports
-        $combinedArtifactPath = "$(Build.ArtifactStagingDirectory)/CombinedReports/$workspaceName/$commitId"
+        $combinedArtifactPath = "$(Build.ArtifactStagingDirectory)/CombinedReports/$workspaceName~$repositoryId~$branchName~$commitId"
         New-Item -ItemType Directory -Path $combinedArtifactPath -Force
 
         try {
